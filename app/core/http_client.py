@@ -1,30 +1,39 @@
-import requests
-from app.core.retry import retry_request
+import httpx
+from app.core.retry import async_retry_request
 from app.core.logger import logger
+from app.core.exceptions import ApiTimeoutError, ApiResponseError
 from app.config.settings import Settings
 
-class HttpClient:
+class AsyncHTTPClient:
     def __init__(self, base_url: str, headers: dict | None = None):
         self.base_url = base_url.rstrip("/")
         self.headers = headers or {}
 
-    @retry_request
-    def request(self, method: str, endpoint: str, **kwargs):
-        url = f"{self.base_url}/{endpoint.lstrip('/')}"
+    @async_retry_request
+    async def request(self, method: str, endpoint: str, **kwargs):
+        url = f"{self.base_url}/{endpoint.lstrip("/")}"
         logger.info(f"{method.upper()} {url}")
 
-
-        response = requests.request(
-            method=method,
-            url=url,
-            headers=self.headers,
-            timeout=Settings.API_TIMEOUT,
-            **kwargs
-        )
-
+        try:
+            async with httpx.AsyncClient(timeout=Settings.API_TIMEOUT) as client:
+                response = await client.request(
+                    method,
+                    url,
+                    headers=self.headers,
+                    **kwargs
+                )
+        except httpx.TimeoutException:
+            raise ApiTimeoutError("API request time out")
         if response.status_code >= 400:
-            raise Exception(
-                f"HTTP {response.status_code}: {response.text}"
+            raise ApiResponseError(
+                response.status_code,
+                response.text
             )
-
-        return response.json()
+        
+        try:
+            return response.json()
+        except ValueError:
+            raise ApiResponseError(
+                response.status_code,
+                "Invalid JSON response"
+            )

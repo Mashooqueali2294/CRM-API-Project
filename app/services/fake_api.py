@@ -1,9 +1,11 @@
-from app.core.http_client import HttpClient
+from app.core.http_client import AsyncHTTPClient
+from app.model.users import User
 
-client = HttpClient("https://jsonplaceholder.typicode.com")
+client = AsyncHTTPClient("https://jsonplaceholder.typicode.com")
 
-def get_users():
-    return client.request("GET", "/users")
+async def get_users():
+    data = await client.request("GET", "/users")
+    return [User(**user) for user in data]
 
-def create_post(data: dict):
-    return client.request("POST", "/posts", json=data)
+async def create_post(data: dict):
+    return await client.request("POST", "/posts", json=data)
