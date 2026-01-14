@@ -1,18 +1,16 @@
-import asyncio
-from app.services.fake_api import get_users, create_post
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
+from app.core.security import create_access_token
 
-async def main():
-    users = await get_users()
-    print(f"Fetched {len(users)} users")
+app = FastAPI()
 
-    post = await create_post({
-        "title": "Async Test",
-        "body": "Production ready client",
-        "userId": 1
-    })
-
-    print("Post Created:", post)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    if form_data.username != "admin" or form_data.password != "admin":
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = create_access_token({"sub": form_data.username})
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
