@@ -1,10 +1,10 @@
-import httpx
+import httpx # ACYNCHTTPMETHOD PROJECT
 from app.core.retry import async_retry_request
 from app.core.logger import logger
 from app.core.exceptions import ApiTimeoutError, ApiResponseError
 from app.config.settings import Settings
 
-class AsyncHTTPClient:
+class AsyncHTTPClient: # ACYNCHTTPMETHOD
     def __init__(self, base_url: str, headers: dict | None = None):
         self.base_url = base_url.rstrip("/")
         self.headers = headers or {}

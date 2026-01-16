@@ -3,10 +3,13 @@ from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
 from app.db.models.user import User
 from app.core.password import hashed_password, verify_password
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from app.core.security import create_access_token
 
 app = FastAPI()
 
+<<<<<<< HEAD
 def get_db():
     db = SessionLocal()
     try:
@@ -36,3 +39,15 @@ def login(email: str, password: str, db: Session = Depends(get_db)):
     
     token = create_access_token({"sub": user.email})
     return {"access_token": token, "token_type": "bearer"}
+=======
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends()):
+    if form_data.username != "admin" or form_data.password != "admin":
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    
+    token = create_access_token({"sub": form_data.username})
+    return {
+        "access_token": token,
+        "token_type": "bearer"
+    }
+>>>>>>> 275867e4b4b1ec80ace908a0e384f6e1cb7b8323
