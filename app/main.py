@@ -1,18 +1,38 @@
-import asyncio
-from app.services.fake_api import get_users, create_post
+from fastapi import FastAPI, HTTPException, Depends
+from sqlalchemy.orm import Session
+from app.db.session import SessionLocal
+from app.db.models.user import User
+from app.core.password import hashed_password, verify_password
+from app.core.security import create_access_token
 
-async def main():
-    users = await get_users()
-    print(f"Fetched {len(users)} users")
+app = FastAPI()
 
-    post = await create_post({
-        "title": "Async Test",
-        "body": "Production ready client",
-        "userId": 1
-    })
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
-    print("Post Created:", post)
+@app.post("/register")
+def register(email: str, password: str, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(status_code = 400, detail="user exists")
+    
+    user = User(
+        email=email,
+        hashed_password=hashed_password(password)
+    )
+    db.add(user)
+    db.commit()
+    return {"message": "User Created"}
 
+@app.post("/login")
+def login(email: str, password: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
 
-if __name__ == "__main__":
-    asyncio.run(main())
+    if not user or not verify_password(password, user.hashed_password):
+        raise HTTPException (status_code=401, detail="Invalid credentials")
+    
+    token = create_access_token({"sub": user.email})
+    return {"access_token": token, "token_type": "bearer"}
